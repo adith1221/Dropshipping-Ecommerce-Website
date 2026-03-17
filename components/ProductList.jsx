@@ -85,7 +85,6 @@ export default function ProductList() {
             <div className="card-body">
               <span className="pill">{product.category}</span>
               <h2>{product.name}</h2>
-              <p className="muted small">{product.description}</p>
             </div>
             <div className="card-footer">
               <div className="price">${product.price}</div>

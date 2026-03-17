@@ -67,7 +67,7 @@ export default function AuthPage() {
           </label>
         </div>
         {error && (
-          <p className="muted tiny" style={{ color: "#f97373" }}>
+          <p className="muted tiny" style={{ color: "#85f973" }}>
             {error}
           </p>
         )}

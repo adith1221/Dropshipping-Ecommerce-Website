@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { db } from "../firebase.js";
-import { collection, query, where, orderBy, onSnapshot, doc, updateDoc } from "firebase/firestore";
+import { collection, query, where, orderBy, onSnapshot, doc, runTransaction, updateDoc } from "firebase/firestore";
 
 export default function OrderHistory() {
   const { user } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const cancelOrder = async (orderId) => {
     if (!window.confirm("Are you sure you want to cancel this order?")) return;
@@ -17,7 +18,7 @@ export default function OrderHistory() {
       alert("Order cancelled successfully.");
     } catch (error) {
       console.error("Error cancelling order:", error);
-      alert("Failed to cancel order. Please try again.");
+      alert(`Failed to cancel order: ${error.code || error.message || error}`);
     }
   };
 
@@ -76,11 +77,33 @@ export default function OrderHistory() {
         <h1>Order History</h1>
         <p className="muted">Your past orders and purchases.</p>
       </div>
+      <div style={{ marginBottom: "1rem" }}>
+  <select
+    value={statusFilter}
+    onChange={(e) => setStatusFilter(e.target.value)}
+    style={{
+      padding: "8px",
+      borderRadius: "8px",
+      border: "1px solid #ccc"
+    }}
+  >
+    <option value="all">All Orders</option>
+    <option value="pending">Pending</option>
+    <option value="processing">Processing</option>
+    <option value="cancelled">Cancelled</option>
+    <option value="completed">Completed</option>
+  </select>
+</div>
       {orders.length === 0 ? (
         <p className="muted">No orders found.</p>
       ) : (
         <div className="orders-list">
-          {orders.map(order => (
+          {orders
+  .filter(order => {
+    if (statusFilter === "all") return true;
+    return (order.status || "processing") === statusFilter;
+  })
+  .map(order => (
             <div key={order.id} className="order-card">
               <div className="order-header">
                 <h3>Order #{order.id.slice(-8)}</h3>
@@ -96,6 +119,7 @@ export default function OrderHistory() {
                   </div>
                 ))}
               </div>
+              
               <div className="order-total">
                 <strong>Total: {order.paymentMethod === "upi" ? "₹" : "$"}{order.subtotal.toFixed(2)}</strong>
               </div>

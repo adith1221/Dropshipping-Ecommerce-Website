@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { collection, doc, runTransaction, serverTimestamp } from "firebase/firestore";
 import { useCart } from "../context/CartContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { db } from "../firebase.js";
@@ -23,6 +23,10 @@ export default function CheckoutPage() {
   const [orderId, setOrderId] = useState(null);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("card");
+  const [orderError, setOrderError] = useState(null);
+  const [upiMerchantId, setUpiMerchantId] = useState("tkabhishek45@oksbi");
+  const [upiMerchantName, setUpiMerchantName] = useState("tkabhishek45");
+  const [upiOpened, setUpiOpened] = useState(false);
 
   const subtotal = cartItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
@@ -46,29 +50,60 @@ export default function CheckoutPage() {
   };
 
   const handlePaymentSuccess = async (paymentData) => {
+    setOrderError(null);
     setPaymentSuccess(true);
-    // Payment successful, now create the order
+    // Payment successful, now create the order and update stock
     setSubmitting(true);
+
+    console.log("Placing order as", user?.uid, user?.email);
+
     try {
-      const ordersRef = collection(db, "orders");
-      const docRef = await addDoc(ordersRef, {
-        userId: user?.uid || null,
-        userEmail: user?.email || form.email,
-        customer: form,
-        items: cartItems.map((item) => ({
-          id: item.id,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-        })),
-        subtotal,
-        createdAt: serverTimestamp(),
-        status: paymentMethod === "cod" ? "pending" : "paid",
-        paymentMethod: paymentMethod,
-        paymentData: paymentData || null,
+      const orderRef = doc(collection(db, "orders"));
+      const items = cartItems.map((item) => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+      }));
+
+      await runTransaction(db, async (tx) => {
+        // Read all product documents first (Firestore requires all reads before any writes in a transaction)
+        const productRefs = items.map((item) => doc(db, "products", item.id));
+        const productSnaps = await Promise.all(productRefs.map((ref) => tx.get(ref)));
+
+        // Then perform writes (stock updates)
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          const productSnap = productSnaps[i];
+          if (!productSnap.exists()) continue;
+          const currentStock = productSnap.data().stock || 0;
+          tx.update(productRefs[i], {
+            stock: Math.max(0, currentStock - item.quantity),
+          });
+        }
+
+        tx.set(orderRef, {
+          userId: user?.uid || null,
+          userEmail: user?.email || form.email,
+          customer: form,
+          items,
+          subtotal,
+          createdAt: serverTimestamp(),
+          status: paymentMethod === "cod" ? "pending" : "paid",
+          paymentMethod: paymentMethod,
+          paymentData: paymentData || null,
+        });
       });
-      setOrderId(docRef.id);
+
+      setOrderId(orderRef.id);
       setCartItems([]);
+    } catch (err) {
+      console.error("Error placing order:", err);
+      const code = err?.code ? `${err.code}: ` : "";
+      const message = err?.message || "Failed to place order. Please try again.";
+      const display = `${code}${message}`;
+      setOrderError(display);
+      alert(`Order failed: ${display}`);
     } finally {
       setSubmitting(false);
     }
@@ -242,16 +277,37 @@ export default function CheckoutPage() {
                 >
                   {submitting ? "Processing…" : `Pay ${paymentMethod === "upi" ? "₹" : "$"}${subtotal.toFixed(2)} with Card`}
                 </button>
+                {orderError && (
+                  <p className="muted" style={{ color: "#f97373", marginTop: "0.75rem" }}>
+                    {orderError}
+                  </p>
+                )}
               </div>
             )}
 
             {paymentMethod === "upi" && (
               <div className="payment-form-section">
+                <label className="full-width">
+                  UPI ID
+                  <input
+                    value={upiMerchantId}
+                    onChange={(e) => setUpiMerchantId(e.target.value)}
+                    placeholder="merchant@bank"
+                  />
+                </label>
+                <label className="full-width">
+                  Merchant Name
+                  <input
+                    value={upiMerchantName}
+                    onChange={(e) => setUpiMerchantName(e.target.value)}
+                    placeholder="Your Business Name"
+                  />
+                </label>
                 <UPIPayment
                   amount={subtotal}
                   orderId={`ORDER_${Date.now()}`}
-                  merchantId="yourupiid@bank" // Replace with your actual UPI ID (e.g., merchant@paytm, user@hdfcbank)
-                  merchantName="Your Business Name"
+                  merchantId={upiMerchantId}
+                  merchantName={upiMerchantName}
                   onSuccess={() => handlePaymentSuccess({ id: "upi_payment_completed", method: "upi" })}
                   onCancel={() => setPaymentMethod("card")}
                 />

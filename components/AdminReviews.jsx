@@ -66,7 +66,7 @@ export default function AdminReviews() {
         />
       </div>
       {loading && <p className="muted">Loading reviews…</p>}
-      {error && <p className="muted" style={{ color: "#f97373" }}>{error}</p>}
+      {error && <p className="muted" style={{ color: "#73f980" }}>{error}</p>}
       {!loading && !error && (
         <div className="admin-table">
           <div className="table-header">

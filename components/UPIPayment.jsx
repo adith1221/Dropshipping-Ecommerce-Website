@@ -7,7 +7,8 @@ export default function UPIPayment({
   merchantId = "tkabhishek45@oksbi",
   merchantName = "tkabhishek45",
   onSuccess,
-  onCancel
+  onCancel,
+  onOpen,
 }) {
 
   const [qrCodeUrl, setQrCodeUrl] = useState("");
@@ -15,7 +16,7 @@ export default function UPIPayment({
 
   useEffect(() => {
     generateUPIPayment();
-  }, [amount, orderId]);
+  }, [amount, orderId, merchantId, merchantName]);
 
   const generateUPIPayment = () => {
 
@@ -44,6 +45,7 @@ const qrUrl =
 
 
   const openUPIApp = () => {
+    if (onOpen) onOpen();
 
     if (!isMobile()) {
       alert("UPI apps open only on mobile. Please scan the QR code.");

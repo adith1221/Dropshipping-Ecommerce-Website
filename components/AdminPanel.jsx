@@ -11,6 +11,17 @@ export default function AdminPanel() {
     useProducts();
   const { user, isAdmin, initializing, login, logout, error } = useAuth();
   const [editingProduct, setEditingProduct] = useState(null);
+  const [activeSection, setActiveSection] = useState("products");
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const sections = [
+    { key: "products", label: "Products" },
+    { key: "orders", label: "Orders" },
+    { key: "reviews", label: "Reviews" },
+    { key: "users", label: "Users" },
+    { key: "categories", label: "Categories" },
+    { key: "analytics", label: "Analytics" },
+  ];
 
   const emptyProduct = {
     id: "",
@@ -103,135 +114,224 @@ export default function AdminPanel() {
           </button>
         </div>
       </div>
-      <div className="admin-grid">
-        <div className="card admin-table">
-          <div className="table-header">
-            <span>Name</span>
-            <span>Category</span>
-            <span>Price</span>
-            <span>Stock</span>
-            <span></span>
-          </div>
-          {products.map((p) => (
-            <div key={p.id} className="table-row">
-              <span>{p.name}</span>
-              <span className="muted small">{p.category}</span>
-              <span>${p.price}</span>
-              <span>{p.stock || 0}</span>
-              <span className="row-actions">
-                <button className="link-button" onClick={() => startEdit(p)}>
-                  Edit
-                </button>
-                <button
-                  className="link-button danger"
-                  onClick={() => deleteProduct(p.id)}
-                >
-                  Delete
-                </button>
-              </span>
-            </div>
-          ))}
-          {products.length === 0 && (
-            <p className="muted small">No products yet. Create one to start.</p>
-          )}
-        </div>
-        <form className="card form-card" onSubmit={handleSubmit}>
-          <h2>{editingProduct ? "Edit product" : "Create product"}</h2>
-          <div className="form-grid">
-            <label className="full-width">
-              Name
-              <input
-                name="name"
-                required
-                value={form.name}
-                onChange={handleChange}
-              />
-            </label>
-            <label className="full-width">
-              Description
-              <textarea
-                name="description"
-                rows={3}
-                required
-                value={form.description}
-                onChange={handleChange}
-              />
-            </label>
-            <label>
-              Category
-              <input
-                name="category"
-                required
-                value={form.category}
-                onChange={handleChange}
-              />
-            </label>
-            <label>
-              Price (USD)
-              <input
-                name="price"
-                type="number"
-                min="0"
-                step="0.01"
-                required
-                value={form.price}
-                onChange={handleChange}
-              />
-            </label>
-            <label>
-              Stock
-              <input
-                name="stock"
-                type="number"
-                min="0"
-                required
-                value={form.stock}
-                onChange={handleChange}
-              />
-            </label>
-            <label className="full-width">
-              Image URL (or upload new image)
-              <input
-                name="image"
-                value={form.image}
-                onChange={handleChange}
-                placeholder="Leave empty to use uploaded file"
-              />
-            </label>
-            <label className="full-width">
-              Upload Image
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setImageFile(e.target.files[0])}
-              />
-            </label>
-          </div>
-          <div className="form-actions">
-            <button type="submit" className="btn primary">
-              {editingProduct ? "Save changes" : "Create product"}
-            </button>
-            {editingProduct || form.id ? (
+
+      <div style={{ position: "relative", margin: "1rem 0" }}>
+        <button
+          type="button"
+          aria-label="Open admin menu"
+          onClick={() => setMenuOpen((open) => !open)}
+          style={{
+            border: "none",
+            background: "transparent",
+            cursor: "pointer",
+            padding: 6,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            gap: 3,
+          }}
+        >
+          <span
+            style={{
+              display: "block",
+              width: 22,
+              height: 2,
+              background: "currentColor",
+              borderRadius: 999,
+            }}
+          />
+          <span
+            style={{
+              display: "block",
+              width: 22,
+              height: 2,
+              background: "currentColor",
+              borderRadius: 999,
+            }}
+          />
+          <span
+            style={{
+              display: "block",
+              width: 22,
+              height: 2,
+              background: "currentColor",
+              borderRadius: 999,
+            }}
+          />
+        </button>
+
+        {menuOpen && (
+          <div
+            style={{
+              position: "absolute",
+              top: "calc(100% + 0.5rem)",
+              left: 0,
+              minWidth: 180,
+              background: "white",
+              border: "1px solid rgba(0,0,0,0.12)",
+              borderRadius: 10,
+              boxShadow: "0 8px 18px rgba(0,0,0,0.12)",
+              zIndex: 20,
+              padding: "0.5rem 0",
+            }}
+          >
+            {sections.map((section) => (
               <button
+                key={section.key}
                 type="button"
-                className="btn ghost"
-                onClick={cancelEdit}
+                onClick={() => {
+                  setActiveSection(section.key);
+                  setMenuOpen(false);
+                }}
+                style={{
+                  width: "100%",
+                  textAlign: "left",
+                  padding: "0.5rem 1rem",
+                  border: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                  fontWeight: section.key === activeSection ? 700 : 500,
+                }}
               >
-                Cancel
+                {section.label}
               </button>
-            ) : null}
+            ))}
           </div>
-          <p className="muted tiny">
-            Changes are persisted in Firestore. Restrict write access to admin
-            users in your Firebase security rules.
-          </p>
-        </form>
+        )}
       </div>
-      <AdminOrders />
-      <AdminReviews />
-      <UserManagement />
-      <CategoryManagement />
-      <AnalyticsDashboard />
+
+      {activeSection === "products" && (
+        <div className="admin-grid">
+          <div className="card admin-table">
+            <div className="table-header">
+              <span>Name</span>
+              <span>Category</span>
+              <span>Price</span>
+              <span>Stock</span>
+              <span></span>
+            </div>
+            {products.map((p) => (
+              <div key={p.id} className="table-row">
+                <span>{p.name}</span>
+                <span className="muted small">{p.category}</span>
+                <span>${p.price}</span>
+                <span>{p.stock || 0}</span>
+                <span className="row-actions">
+                  <button className="link-button" onClick={() => startEdit(p)}>
+                    Edit
+                  </button>
+                  <button
+                    className="link-button danger"
+                    onClick={() => deleteProduct(p.id)}
+                  >
+                    Delete
+                  </button>
+                </span>
+              </div>
+            ))}
+            {products.length === 0 && (
+              <p className="muted small">No products yet. Create one to start.</p>
+            )}
+          </div>
+          <form className="card form-card" onSubmit={handleSubmit}>
+            <h2>{editingProduct ? "Edit product" : "Create product"}</h2>
+            <div className="form-grid">
+              <label className="full-width">
+                Name
+                <input
+                  name="name"
+                  required
+                  value={form.name}
+                  onChange={handleChange}
+                />
+              </label>
+              <label className="full-width">
+                Description
+                <textarea
+                  name="description"
+                  rows={3}
+                  required
+                  value={form.description}
+                  onChange={handleChange}
+                />
+              </label>
+              <label>
+                Category
+                <input
+                  name="category"
+                  required
+                  value={form.category}
+                  onChange={handleChange}
+                />
+              </label>
+              <label>
+                Price (USD)
+                <input
+                  name="price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  required
+                  value={form.price}
+                  onChange={handleChange}
+                />
+              </label>
+              <label>
+                Stock
+                <input
+                  name="stock"
+                  type="number"
+                  min="0"
+                  required
+                  value={form.stock}
+                  onChange={handleChange}
+                />
+              </label>
+              <label className="full-width">
+                Image URL (or upload new image)
+                <input
+                  name="image"
+                  value={form.image}
+                  onChange={handleChange}
+                  placeholder="Leave empty to use uploaded file"
+                />
+              </label>
+              <label className="full-width">
+                Upload Image
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setImageFile(e.target.files[0])}
+                />
+              </label>
+            </div>
+            <div className="form-actions">
+              <button type="submit" className="btn primary">
+                {editingProduct ? "Save changes" : "Create product"}
+              </button>
+              {editingProduct || form.id ? (
+                <button
+                  type="button"
+                  className="btn ghost"
+                  onClick={cancelEdit}
+                >
+                  Cancel
+                </button>
+              ) : null}
+            </div>
+            <p className="muted tiny">
+              Changes are persisted in Firestore. Restrict write access to admin
+              users in your Firebase security rules.
+            </p>
+          </form>
+        </div>
+      )}
+
+      {activeSection === "orders" && <AdminOrders />}
+      {activeSection === "reviews" && <AdminReviews />}
+      {activeSection === "users" && <UserManagement />}
+      {activeSection === "categories" && <CategoryManagement />}
+      {activeSection === "analytics" && <AnalyticsDashboard />}
     </section>
   );
 }
