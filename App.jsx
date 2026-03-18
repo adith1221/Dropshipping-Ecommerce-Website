@@ -11,6 +11,7 @@ import ProfilePage from "./components/ProfilePage.jsx";
 import { CartContext } from "./context/CartContext.jsx";
 import { ProductProvider } from "./context/ProductContext.jsx";
 import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
+import React from "react";
 
 export default function App() {
   const [products, setProducts] = useState([]);

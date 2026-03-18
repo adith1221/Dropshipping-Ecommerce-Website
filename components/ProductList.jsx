@@ -2,6 +2,7 @@ import { useProducts } from "../context/ProductContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { useNavigate } from "react-router-dom";
 import { useState, useMemo } from "react";
+import React from "react";
 
 export default function ProductList() {
   const { products } = useProducts();
